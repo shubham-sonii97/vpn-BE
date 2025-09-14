@@ -4,7 +4,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: api/Dockerfile
+      dockerfile: api/src/Dockerfile
     env_file:
       - .env
     # map host 4000 -> container 4000 so external clients (Postman) can reach API
