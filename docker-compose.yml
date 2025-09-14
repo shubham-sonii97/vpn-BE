@@ -1,34 +1,24 @@
 version: "3.8"
 
 services:
-  mysql:
-    image: mysql:8.0
-    environment:
-      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD:-rootpass}"
-      MYSQL_DATABASE: "${DB_NAME:-vpnapp}"
-      MYSQL_USER: "${DB_USER:-vpnuser}"
-      MYSQL_PASSWORD: "${DB_PASS:-vpnpass}"
-    volumes:
-      - db_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   api:
     build:
       context: .
       dockerfile: api/Dockerfile
     env_file:
       - .env
+    # map host 4000 -> container 4000 so external clients (Postman) can reach API
     ports:
       - "${API_PORT:-4000}:4000"
-    depends_on:
-      - mysql
     restart: unless-stopped
     networks:
       - vpnnet
+    # allow container to resolve host.docker.internal -> host gateway
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    # mount the server public key so API can read it (path used by SERVER_PUBLIC_KEY_FILE)
+    volumes:
+      - /etc/wireguard/server_public.key:/etc/wireguard/server_public.key:ro
 
   sidecar:
     build:
@@ -36,25 +26,25 @@ services:
       dockerfile: sidecar/Dockerfile
     env_file:
       - .env
-    # sidecar needs to call wg and modify interface. Use host network and give NET_ADMIN
+    # sidecar must interact with host kernel network (wg)
     network_mode: "host"
     cap_add:
       - NET_ADMIN
+    # mount host wg binary and keys for sidecar to use
     volumes:
-      # optional: mount host /usr/bin/wg if needed
       - /usr/bin/wg:/usr/bin/wg:ro
       - /etc/wireguard:/etc/wireguard:ro
     restart: unless-stopped
-    # no exposed ports here because network_mode: host binds directly
-    # but declare a healthcheck (curl localhost:8443/healthz)
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://127.0.0.1:8443/healthz || exit 1"]
+      test: ["CMD-SHELL", "curl -sSf http://127.0.0.1:8443/healthz || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
 
 volumes:
+  # keep here if you later want DB container
   db_data:
 
 networks:
   vpnnet:
+    name: vpnnet
