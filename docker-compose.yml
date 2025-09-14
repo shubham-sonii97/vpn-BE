@@ -1,0 +1,60 @@
+version: "3.8"
+
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD:-rootpass}"
+      MYSQL_DATABASE: "${DB_NAME:-vpnapp}"
+      MYSQL_USER: "${DB_USER:-vpnuser}"
+      MYSQL_PASSWORD: "${DB_PASS:-vpnpass}"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    env_file:
+      - .env
+    ports:
+      - "${API_PORT:-4000}:4000"
+    depends_on:
+      - mysql
+    restart: unless-stopped
+    networks:
+      - vpnnet
+
+  sidecar:
+    build:
+      context: .
+      dockerfile: sidecar/Dockerfile
+    env_file:
+      - .env
+    # sidecar needs to call wg and modify interface. Use host network and give NET_ADMIN
+    network_mode: "host"
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      # optional: mount host /usr/bin/wg if needed
+      - /usr/bin/wg:/usr/bin/wg:ro
+      - /etc/wireguard:/etc/wireguard:ro
+    restart: unless-stopped
+    # no exposed ports here because network_mode: host binds directly
+    # but declare a healthcheck (curl localhost:8443/healthz)
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://127.0.0.1:8443/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  db_data:
+
+networks:
+  vpnnet:
