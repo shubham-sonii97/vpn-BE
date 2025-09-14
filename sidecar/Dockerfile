@@ -1,13 +1,15 @@
 FROM node:20-slim
 
 WORKDIR /usr/src/sidecar
-COPY sidecar/package*.json ./
-RUN npm ci --production
 
+# copy package metadata
+COPY sidecar/package*.json ./
+
+# install production deps
+RUN npm install --production --no-audit --no-fund
+
+# copy source
 COPY sidecar/ ./
 
-# sidecar expects env SIDECAR_SECRET, WG_IFACE, etc.
-# It will listen on 8443
 EXPOSE 8443
-
 CMD ["node", "app.js"]

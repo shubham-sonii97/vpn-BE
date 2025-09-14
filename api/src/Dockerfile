@@ -1,14 +1,15 @@
 FROM node:20-slim
 
-# app dir
 WORKDIR /usr/src/app
 
-# copy only package files first (speed up rebuilds)
-COPY api/package*.json ./ 
-RUN npm ci --production
+# copy package files first (for Docker layer cache)
+COPY api/package*.json ./
 
-# copy source
-COPY api/ ./ 
+# install production deps (uses npm install if no package-lock.json)
+RUN npm install --production --no-audit --no-fund
+
+# copy rest of source
+COPY api/ ./
 
 ENV NODE_ENV=production
 EXPOSE 4000
