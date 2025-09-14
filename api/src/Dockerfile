@@ -1,18 +1,21 @@
-# api/Dockerfile
+# api/Dockerfile (fixed)
 FROM node:20-slim
 
-# create app directory
-WORKDIR /usr/src/app
+# use /usr/src as project root so node_modules is visible to /usr/src/db and /usr/src/app
+WORKDIR /usr/src
 
-# copy root package.json and package-lock (if present)
-# Note: this expects your repo root to have package.json / package-lock.json
+# copy root package.json / package-lock if present into /usr/src
 COPY package*.json ./
-# install production deps (works even if no lockfile)
+
+# install production deps at /usr/src/node_modules so all subfolders can resolve them
 RUN npm install --production --no-audit --no-fund
 
-COPY db/ /usr/src/db/
-# copy api source into image
-COPY api/ ./ 
+# copy db and api source into image under /usr/src
+COPY db/ ./db/
+COPY api/ ./app/
+
+# set workingdir to app when running
+WORKDIR /usr/src/app
 
 ENV NODE_ENV=production
 EXPOSE 4000
