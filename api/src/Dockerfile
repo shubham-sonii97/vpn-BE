@@ -2,7 +2,7 @@
 FROM node:20-slim
 
 # use /usr/src as project root so node_modules is visible to /usr/src/db and /usr/src/app
-WORKDIR /usr/src/api/src
+WORKDIR /usr/src/api/
 
 # copy root package.json / package-lock if present into /usr/src
 COPY package*.json ./
