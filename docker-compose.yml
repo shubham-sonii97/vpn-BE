@@ -32,7 +32,6 @@ services:
       - NET_ADMIN
     # mount host wg binary and keys for sidecar to use
     volumes:
-      - /usr/bin/wg:/usr/bin/wg:ro
       - /etc/wireguard:/etc/wireguard:ro
     restart: unless-stopped
     healthcheck:

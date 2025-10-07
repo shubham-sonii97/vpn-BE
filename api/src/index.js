@@ -111,7 +111,7 @@ app.get('/v1/regions', async (_req, res) => {
 app.post('/v1/sessions/start', async (req, res) => {
   const userId = req.userId;
   const deviceId = req.deviceId;
-  console.log({ userId, deviceId });
+  console.log({ userId, userId, deviceId });
   try {
     const [[server]] = await db.query(
       `SELECT * FROM servers WHERE is_active=1 ORDER BY id LIMIT 1`
