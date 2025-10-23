@@ -36,4 +36,4 @@ EXPOSE 4000
 USER appuser
 
 # Start your app (path you used previously)
-CMD ["node", "/usr/src/src/index.js"]
+CMD ["node", "index.js"]
