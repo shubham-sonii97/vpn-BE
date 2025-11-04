@@ -21,10 +21,11 @@ services:
 
   sidecar:
     build:
-      context: ./sidecar
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: sidecar/Dockerfile
     env_file:
       - .env
+    # sidecar needs to manage host wireguard interfaces; host networking is simplest on EC2
     network_mode: "host"
     cap_add:
       - NET_ADMIN

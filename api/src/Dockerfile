@@ -1,16 +1,15 @@
-# ---------- builder stage ----------
+# api/src/Dockerfile
+# Build from repo root context (it will copy api/src and db/ from there)
+
 FROM node:20-slim AS builder
 WORKDIR /workspace
 
-# copy root package files
+# Copy package files (from repo root) and install build deps
 COPY package*.json ./
 RUN npm ci
 
-# copy full repo so runtime files can be copied later
+# Copy the whole repo into the builder workspace
 COPY . .
-
-# optional build step if you have TypeScript
-# RUN npm run build
 
 # ---------- runtime stage ----------
 FROM node:20-slim AS runtime
@@ -18,22 +17,28 @@ FROM node:20-slim AS runtime
 # create non-root user
 RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
 
-# Set WORKDIR to /usr so node_modules are installed under /usr/node_modules
-WORKDIR /usr
+# set app workdir
+WORKDIR /usr/src/app
 
-# Copy package.json from builder and install production deps here at /usr/node_modules
+# copy production deps only
 COPY --from=builder /workspace/package*.json ./
 RUN npm ci --omit=dev --no-audit --no-fund
 
-# Create expected folders and copy runtime sources
-RUN mkdir -p /usr/db /usr/src/src
+# copy app source (from repo's api/src)
+COPY --from=builder /workspace/api/src ./ 
+
+# copy db folder into /usr/db so imports like '../../db/db.js' resolve to /usr/db/db.js
 COPY --from=builder /workspace/db /usr/db
-COPY --from=builder /workspace/api/src /usr/src/src
+
+# create a symlink so modules required by /usr/db/db.js resolve correctly:
+# /usr/db/node_modules -> /usr/src/app/node_modules
+RUN mkdir -p /usr/db && ln -s /usr/src/app/node_modules /usr/db/node_modules || true
+
+# ensure permissions
+RUN chown -R appuser:appgroup /usr/src/app /usr/db
 
 ENV NODE_ENV=production
 EXPOSE 4000
 
 USER appuser
-
-# Start your app (path you used previously)
 CMD ["node", "index.js"]

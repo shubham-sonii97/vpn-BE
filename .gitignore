@@ -1,2 +1,4 @@
 .env
 /node_modules
+/api/src/node_modules
+/sidecar/node_modules
